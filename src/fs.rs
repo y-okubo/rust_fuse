@@ -73,6 +73,7 @@ impl Filesystem for MemoryFS {
 
     reply.add(1, 0, FileType::Directory, ".");
     reply.add(2, 1, FileType::Directory, "..");
+
     let mut reply_add_offset = 2;
     for (_, f) in self.inodes.iter() {
       if _ino == f.0 {
@@ -84,6 +85,7 @@ impl Filesystem for MemoryFS {
     }
     reply.ok();
   }
+
   // Lookup
   fn lookup(&mut self, _req: &Request, parent: u64, name: &OsStr, reply: ReplyEntry) {
     for (_, f) in self.inodes.iter() {
@@ -94,6 +96,7 @@ impl Filesystem for MemoryFS {
     }
     reply.error(ENOENT);
   }
+
   // Create
   fn create(
     &mut self,
@@ -135,6 +138,7 @@ impl Filesystem for MemoryFS {
       None => reply.error(EACCES),
     }
   }
+
   // Write
   fn write(
     &mut self,
@@ -179,6 +183,26 @@ impl Filesystem for MemoryFS {
     match self.datas.get(&ino) {
       Some(x) => reply.data(x.as_bytes()), // 読み出しデータ内容を伝える
       None => reply.error(EACCES),         // 雑にlibc::EACCES返す
+    }
+  }
+
+  // Unlink
+  fn unlink(&mut self, _req: &Request, _parent: u64, _name: &OsStr, reply: ReplyEmpty) {
+    let mut inode: u64 = 0;
+    let _inodes = &mut self.inodes;
+    for (n, f) in _inodes.iter() {
+      // TODO: for (k, v) in &map でもいけるか試す
+      if f.0 == _parent && _name.to_str().unwrap() == f.1.as_str() {
+        inode = n.clone();
+        break;
+      }
+    }
+
+    if inode == 0 {
+      reply.error(ENOENT);
+    } else {
+      _inodes.remove(&inode);
+      reply.ok();
     }
   }
 
